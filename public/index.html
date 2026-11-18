@@ -205,8 +205,24 @@ svg{display:block}
 .card.sel .front{filter:brightness(1.06)}
 .card.drop-ok{animation:pulseGold 1s ease-in-out infinite}
 .card.drop-hover{box-shadow:0 0 0 2.5px var(--gold-hi),0 0 24px rgba(233,180,76,.7),0 3px 8px rgba(0,0,0,.4)}
-.card.hint-src{animation:pulseCyan .7s ease-in-out infinite}
-.card.hint-dst{animation:pulseGold .7s ease-in-out infinite}
+.card.hint-src{animation:hintSrc .8s ease-in-out infinite}
+.card.hint-dst{animation:hintDst .8s ease-in-out infinite}
+@keyframes hintSrc{0%,100%{box-shadow:0 0 0 3px var(--cyan),0 0 14px rgba(84,214,232,.6)}
+  50%{box-shadow:0 0 0 4px #9ef0fb,0 0 30px rgba(84,214,232,.95)}}
+@keyframes hintDst{0%,100%{box-shadow:0 0 0 3px var(--gold-hi),0 0 16px rgba(233,180,76,.65)}
+  50%{box-shadow:0 0 0 5px #ffe19a,0 0 34px rgba(233,180,76,1)}}
+#board.hinting .card{filter:brightness(.42) saturate(.7);transition:filter .25s}
+#board.hinting .card.hint-src,#board.hinting .card.hint-dst,#board.hinting .card.ghost{filter:none}
+#board.hinting .slot.hint-dst{border-width:3px;box-shadow:0 0 22px rgba(233,180,76,.9)}
+.card.ghost{pointer-events:none!important;opacity:0;
+  transition:transform .62s cubic-bezier(.45,.05,.25,1),opacity .22s!important}
+.card.ghost.on{opacity:.93}
+.card.ghost .face{box-shadow:0 0 0 3px var(--cyan),0 18px 34px rgba(0,0,0,.6)}
+#hintPill{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:3000;pointer-events:none;
+  padding:7px 16px;border-radius:999px;background:rgba(5,26,30,.94);border:1px solid var(--cyan);
+  color:#e9fbfd;font:600 13px/1.2 var(--cond,sans-serif);letter-spacing:.06em;white-space:nowrap;
+  box-shadow:0 0 18px rgba(84,214,232,.45);animation:fadein .2s}
+#hintPill b{color:var(--gold-hi)}
 .card.dragging{transition:none!important;cursor:grabbing}
 .card.dragging .face{box-shadow:0 16px 30px rgba(0,0,0,.55)}
 .card.dragging .front{filter:brightness(1.05)}
@@ -894,6 +910,7 @@ function renderAll(instantMode){
     CARDS.forEach(c=>{ if(!inPlay.has(c.id)&&!c.flying) c.el.style.display='none'; });
     if(sel) markTargets(legalTargets(sel.col,sel.i));
     renderFan(); renderFound(); renderStats();
+    if(hintRun&&hintRun.mark) hintRun.mark();
   };
   if(instantMode) instant(run); else run();
 }
@@ -1211,22 +1228,101 @@ function undo(){
   SND.undo(); vib(6); save();
   schedule(()=>{ if(!S.won&&!lock&&!anyMoves()) showStuck(); },600);
 }
+/* ---------- hints: rank every useful move, then animate each one ---------- */
+function allMoves(){
+  const out=[], seen=new Set();
+  for(let i=0;i<10;i++){
+    const a=S.cols[i]; let emptyDone=false;
+    for(let k=a.length-1;k>=0;k--){
+      if(!movableFrom(i,k)) break;
+      const head=a[k], len=a.length-k, p=k>0?a[k-1]:null;
+      const sitsNatural=p&&p.up&&p.rank===head.rank+1;      // already on a legal card
+      const sitsSuited=sitsNatural&&p.suit===head.suit;      // already on its own suit
+      for(let j=0;j<10;j++){
+        if(j===i) continue;
+        const t=S.cols[j]; let sc;
+        if(!t.length){
+          if(k===0||emptyDone||sitsSuited) continue;          // pointless / duplicate empty-column moves
+          sc=14;
+        }else{
+          const top=t[t.length-1];
+          if(top.rank!==head.rank+1) continue;
+          const suited=top.suit===head.suit;
+          if(sitsSuited) continue;                            // would break a suited run
+          if(sitsNatural&&!suited) continue;                  // sideways shuffle, gains nothing
+          sc=10+(suited?52:-4);
+        }
+        if(k>0){ if(!p.up) sc+=34; } else sc+=16;           // reveals a card / empties a column
+        if(S.lastMove&&S.lastMove.from===j&&S.lastMove.to===i&&S.lastMove.head===head.id) sc-=90;
+        sc+=len*1.5;
+        const key=i+':'+k+':'+(t.length?j:'e');
+        if(seen.has(key)) continue; seen.add(key);
+        if(!t.length) emptyDone=true;
+        out.push({from:i,i:k,to:j,sc});
+      }
+    }
+  }
+  return out.sort((x,y)=>y.sc-x.sc);
+}
+let hintRun=null;
+function stopHint(){
+  if(!hintRun) return;
+  hintRun.timers.forEach(clearTimeout);
+  hintRun.ghosts.forEach(g=>g.remove());
+  hintRun.pill.remove();
+  board.classList.remove('hinting');
+  stockBtn.classList.remove('pulse');
+  hintRun=null; clearMarks();
+}
 function hint(){
+  if(hintRun){ stopHint(); return; }
   if(lock||S.won||modalOpen) return;
   initAudio(); sel=null; clearMarks(); renderAll(false);
-  const m=findBestMove();
-  if(m){
-    S.cols[m.from].slice(m.i).forEach(c=>c.el.classList.add('hint-src'));
-    const t=S.cols[m.to];
-    if(t.length) t[t.length-1].el.classList.add('hint-dst');
-    else slotEls[m.to].classList.add('hint-dst');
-    SND.hint(); vib(4);
-    schedule(()=>clearMarks(),1700);
-  }else if(S.stock.length){
-    stockBtn.classList.add('pulse');
-    schedule(()=>stockBtn.classList.remove('pulse'),1800);
-    toast('No card moves — deal from the deck','info'); SND.hint();
-  }else showStuck();
+  const moves=allMoves();
+  const steps=moves.map(m=>({m}));
+  if(S.stock.length&&S.cols.every(c=>c.length)) steps.push({deal:true});
+  if(!steps.length){ showStuck(); return; }
+  const pill=document.createElement('div'); pill.id='hintPill'; board.appendChild(pill);
+  const R=hintRun={timers:[],ghosts:[],pill};
+  const later=(fn,ms)=>R.timers.push(setTimeout(()=>{ if(hintRun===R) fn(); },ms));
+  const STEP=RM?1500:1700;
+  board.classList.add('hinting'); SND.hint(); vib(4);
+  const play=n=>{
+    if(n>=steps.length){ stopHint(); return; }
+    R.mark=null; clearMarks(); stockBtn.classList.remove('pulse');
+    R.ghosts.forEach(g=>g.remove()); R.ghosts=[];
+    const st=steps[n], label=n===0&&steps.length>1?' · best first':'';
+    if(st.deal){
+      pill.innerHTML=`Hint <b>${n+1}</b> of ${steps.length} — deal a new row${label} · tap to stop`;
+      stockBtn.classList.add('pulse');
+      later(()=>play(n+1),STEP); return;
+    }
+    const m=st.m, src=S.cols[m.from], run=src.slice(m.i), t=S.cols[m.to];
+    pill.innerHTML=`Hint <b>${n+1}</b> of ${steps.length}${label} · tap to stop`;
+    R.mark=()=>{
+      run.forEach(c=>c.el.classList.add('hint-src'));
+      if(t.length) t[t.length-1].el.classList.add('hint-dst'); else slotEls[m.to].classList.add('hint-dst');
+    };
+    R.mark();
+    // target positions as if the run were already appended
+    const ys=computeYs(t.concat(run)), tx=M.colX(m.to);
+    run.forEach((c,q)=>{
+      const g=c.el.cloneNode(true);
+      g.classList.remove('hint-src','sel','drop-ok','drop-hover');
+      g.classList.add('ghost'); g.style.display='';
+      g.style.zIndex=2000+q; g.style.transform=`translate3d(${c.x}px,${c.y}px,0)`;
+      layer.appendChild(g); R.ghosts.push(g);
+      const ty=ys[t.length+q];
+      if(RM){ g.style.transform=`translate3d(${tx}px,${ty}px,0)`; requestAnimationFrame(()=>g.classList.add('on')); return; }
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        g.classList.add('on');
+        later(()=>{ g.style.transitionDelay=(q*0.03)+'s'; g.style.transform=`translate3d(${tx}px,${ty}px,0)`; },260);
+      }));
+    });
+    later(()=>R.ghosts.forEach(g=>g.classList.remove('on')),STEP-300);
+    later(()=>play(n+1),STEP);
+  };
+  play(0);
 }
 function autoMove(col,i){
   const t=bestTargetFor(col,i);
@@ -1251,6 +1347,7 @@ function win(){
 
 /* ---------------- new game / restore ---------------- */
 function newGame(diff){
+  stopHint();
   cancelSchedules(); if(drag) endDrag(false);
   closeModal(); sel=null; clearMarks(); prevScore=null;
   settings.lastDiff=diff; saveSettings();
@@ -1413,6 +1510,7 @@ board.addEventListener('pointercancel',e=>{
 
 /* ---------------- modal ---------------- */
 function openModal(html,dismiss=true){
+  stopHint();
   modal.hidden=false; modalOpen=true;
   panel.innerHTML=html;
   panel.style.animation='none'; void panel.offsetWidth; panel.style.animation='';
@@ -1519,13 +1617,20 @@ btnFull.addEventListener('click',toggleFullscreen);
 btnNew.addEventListener('click',()=>{ initAudio(); SND.button(); openNewGameModal(); });
 btnHelp.addEventListener('click',()=>{ initAudio(); SND.button(); openHelp(false); });
 btnUndo.addEventListener('click',undo);
-btnHint.addEventListener('click',hint);
+btnHint.addEventListener('click',()=>{ if(hintTapStop){ hintTapStop=false; return; } hint(); });
 stockBtn.addEventListener('click',dealRow);
 document.addEventListener('pointerdown',initAudio,{passive:true});
+let hintTapStop=false;
+document.addEventListener('pointerdown',e=>{
+  if(!hintRun) return;
+  if(btnHint.contains(e.target)) hintTapStop=true;   // the click that follows should not restart it
+  stopHint();
+},{capture:true});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&modalOpen){ closeModal(); return; }
   if(modalOpen) return;
   const k=e.key.toLowerCase();
+  if(hintRun&&k!=='h'){ stopHint(); }
   if(k==='z'){ e.preventDefault(); undo(); }
   else if(k==='h') hint();
   else if(k==='d'||k===' '){ e.preventDefault(); dealRow(); }
