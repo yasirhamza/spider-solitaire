@@ -1,0 +1,10 @@
+{
+  // Static-assets-only Worker: serves ./public on Cloudflare's edge, no server code.
+  "name": "spider-solitaire",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "single-page-application"
+  },
+  "workers_dev": true
+}
