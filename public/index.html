@@ -1451,11 +1451,12 @@ function markHover(j){
   hoverEl=t.length?t[t.length-1].el:slotEls[j];
   hoverEl.classList.add('drop-hover');
 }
-function handleTap(col,i){
-  const card=S.cols[col][i], key=col+':'+i, now=performance.now();
+const DOUBLE_TAP_MS=450;
+function handleTap(col,i,tapT){
+  const card=S.cols[col][i], key=col+':'+i, now=tapT||performance.now();
   if(sel){
     if(sel.col===col&&sel.i===i){
-      if(now-lastTapT<330&&lastTapKey===key){ lastTapT=0; autoMove(col,i); }
+      if(now-lastTapT<DOUBLE_TAP_MS&&lastTapKey===key){ lastTapT=0; autoMove(col,i); }
       else{ sel=null; SND.deselect(); renderAll(false); }
       return;
     }
@@ -1480,7 +1481,7 @@ function endDrag(commit,target){
   }else{
     const head=d.cards[0];
     setPos(head,head.x,head.y,d.i+1);
-    if(commit) handleTap(d.from,d.i);
+    if(commit) handleTap(d.from,d.i,d.t0);
   }
 }
 board.addEventListener('pointerdown',e=>{
@@ -1496,7 +1497,7 @@ board.addEventListener('pointerdown',e=>{
     if(!c.up||!movableFrom(loc.col,loc.i)){ denyCard(c); return; }
     e.preventDefault();
     drag={pid:e.pointerId,from:loc.col,i:loc.i,cards:S.cols[loc.col].slice(loc.i),
-      sx:e.clientX,sy:e.clientY,started:false,target:-1,targets:null,
+      sx:e.clientX,sy:e.clientY,t0:e.timeStamp||performance.now(),started:false,target:-1,targets:null,
       grabX:e.clientX-(boardRect.left+c.x),grabY:e.clientY-(boardRect.top+c.y)};
     try{ board.setPointerCapture(e.pointerId); }catch(err){}
     const head=drag.cards[0];
