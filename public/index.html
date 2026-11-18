@@ -219,8 +219,9 @@ svg{display:block}
 .card.ghost.on{opacity:.93}
 .card.ghost .face{box-shadow:0 0 0 3px var(--cyan),0 18px 34px rgba(0,0,0,.6)}
 #hintPill{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:3000;pointer-events:none;
-  padding:7px 16px;border-radius:999px;background:rgba(5,26,30,.94);border:1px solid var(--cyan);
-  color:#e9fbfd;font:600 13px/1.2 var(--cond,sans-serif);letter-spacing:.06em;white-space:nowrap;
+  padding:7px 16px;border-radius:18px;background:rgba(5,26,30,.94);border:1px solid var(--cyan);
+  color:#e9fbfd;font:600 13px/1.25 var(--cond,sans-serif);letter-spacing:.05em;text-align:center;
+  width:max-content;max-width:calc(100% - 24px);
   box-shadow:0 0 18px rgba(84,214,232,.45);animation:fadein .2s}
 #hintPill b{color:var(--gold-hi)}
 .card.dragging{transition:none!important;cursor:grabbing}
@@ -1229,40 +1230,76 @@ function undo(){
   schedule(()=>{ if(!S.won&&!lock&&!anyMoves()) showStuck(); },600);
 }
 /* ---------- hints: rank every useful move, then animate each one ---------- */
-function allMoves(){
-  const out=[], seen=new Set();
+/* A move is USEFUL only if it makes real progress:
+   STRONG  - reveals a face-down card, or empties a column;
+   FIX     - re-homes a run that sits on an off-suit card onto its own suit;
+   anything else (plain stacking, off-suit shuffles, using an empty column) only counts
+   if it ENABLES a strong/fix move that wasn't possible before (1-move lookahead).
+   Never breaks a suited run; one best target per source run; undoing the last move
+   never counts. If nothing qualifies, the single best tidy-up move is offered. */
+function rawMoves(){
+  const out=[];
   for(let i=0;i<10;i++){
-    const a=S.cols[i]; let emptyDone=false;
+    const a=S.cols[i];
     for(let k=a.length-1;k>=0;k--){
       if(!movableFrom(i,k)) break;
-      const head=a[k], len=a.length-k, p=k>0?a[k-1]:null;
-      const sitsNatural=p&&p.up&&p.rank===head.rank+1;      // already on a legal card
-      const sitsSuited=sitsNatural&&p.suit===head.suit;      // already on its own suit
+      const head=a[k], p=k>0?a[k-1]:null;
+      const sitsSuited=p&&p.up&&p.rank===head.rank+1&&p.suit===head.suit;
+      if(sitsSuited) continue;                       // never break a suited run
       for(let j=0;j<10;j++){
         if(j===i) continue;
-        const t=S.cols[j]; let sc;
-        if(!t.length){
-          if(k===0||emptyDone||sitsSuited) continue;          // pointless / duplicate empty-column moves
-          sc=14;
-        }else{
-          const top=t[t.length-1];
-          if(top.rank!==head.rank+1) continue;
-          const suited=top.suit===head.suit;
-          if(sitsSuited) continue;                            // would break a suited run
-          if(sitsNatural&&!suited) continue;                  // sideways shuffle, gains nothing
-          sc=10+(suited?52:-4);
-        }
-        if(k>0){ if(!p.up) sc+=34; } else sc+=16;           // reveals a card / empties a column
-        if(S.lastMove&&S.lastMove.from===j&&S.lastMove.to===i&&S.lastMove.head===head.id) sc-=90;
-        sc+=len*1.5;
-        const key=i+':'+k+':'+(t.length?j:'e');
-        if(seen.has(key)) continue; seen.add(key);
-        if(!t.length) emptyDone=true;
-        out.push({from:i,i:k,to:j,sc});
+        const t=S.cols[j], top=t[t.length-1];
+        if(t.length?top.rank!==head.rank+1:k===0) continue;
+        if(S.lastMove&&S.lastMove.from===j&&S.lastMove.to===i&&S.lastMove.head===head.id) continue;
+        const reveals=!!p&&!p.up, empties=k===0&&t.length>0, suited=!!top&&top.suit===head.suit;
+        const fix=suited&&!!p&&p.up&&p.rank===head.rank+1;   // off-suit join -> suited join
+        out.push({from:i,i:k,to:j,head,len:a.length-k,reveals,empties,suited,fix,
+                  primary:reveals||empties||fix,toEmpty:!t.length});
       }
     }
   }
-  return out.sort((x,y)=>y.sc-x.sc);
+  return out;
+}
+const mvKey=m=>m.head.id+'>'+(S.cols[m.to].length?S.cols[m.to][S.cols[m.to].length-1].id:'e');
+function enables(m,before){
+  // play the move on the arrays, list progress moves, then undo
+  const src=S.cols[m.from], dst=S.cols[m.to], run=src.splice(m.i), saved=S.lastMove;
+  dst.push(...run); S.lastMove={from:m.from,to:m.to,head:m.head.id};
+  let gain=null;
+  for(const n of rawMoves()){
+    if(!n.primary||n.head===m.head) continue;
+    if(n.from===m.to&&n.i>=dst.length-run.length) continue;   // just moving the same run again
+    if(!before.has(mvKey(n))){ gain=n; break; }
+  }
+  dst.splice(dst.length-run.length); src.push(...run); S.lastMove=saved;
+  return gain;
+}
+const RN=r=>RANKS[r-1];
+function allMoves(){
+  const raw=rawMoves(), before=new Set(raw.filter(m=>m.primary).map(mvKey));
+  const best=new Map();
+  for(const m of raw){
+    let sc, why;
+    if(m.primary){
+      sc=(m.reveals?60:0)+(m.empties?45:0)+(m.fix?30:0)+(m.suited?12:0)+m.len*1.5-(m.toEmpty?25:0);
+      why=[m.reveals&&'reveals a hidden card',m.empties&&'empties a column',
+           m.fix&&'swaps an off-suit join for a same-suit one'].filter(Boolean).join(' · ');
+    }else{
+      const g=enables(m,before); if(!g) continue;
+      sc=20+(m.suited?10:0)+m.len-(m.toEmpty?20:0);
+      why=`frees a spot so ${RN(g.head.rank)}${GLYPH[g.head.suit]} can move → `+
+          (g.reveals?'reveals a hidden card':g.empties?'empties a column':'same-suit join');
+    }
+    const k=m.from+':'+m.i, cur=best.get(k);
+    if(!cur||sc>cur.sc) best.set(k,{from:m.from,i:m.i,to:m.to,sc,why});
+  }
+  const list=[...best.values()].sort((x,y)=>y.sc-x.sc);
+  if(!list.length){                                  // fallback: one best tidy-up move
+    const t=raw.filter(m=>!m.toEmpty).sort((x,y)=>(y.suited-x.suited)||(y.len-x.len))[0];
+    if(t) list.push({from:t.from,i:t.i,to:t.to,sc:0,
+      why:'no progress moves — best tidy-up'+(t.suited?' (same-suit stack)':'')});
+  }
+  return list;
 }
 let hintRun=null;
 function stopHint(){
@@ -1291,14 +1328,14 @@ function hint(){
     if(n>=steps.length){ stopHint(); return; }
     R.mark=null; clearMarks(); stockBtn.classList.remove('pulse');
     R.ghosts.forEach(g=>g.remove()); R.ghosts=[];
-    const st=steps[n], label=n===0&&steps.length>1?' · best first':'';
+    const st=steps[n], label='';
     if(st.deal){
       pill.innerHTML=`Hint <b>${n+1}</b> of ${steps.length} — deal a new row${label} · tap to stop`;
       stockBtn.classList.add('pulse');
       later(()=>play(n+1),STEP); return;
     }
     const m=st.m, src=S.cols[m.from], run=src.slice(m.i), t=S.cols[m.to];
-    pill.innerHTML=`Hint <b>${n+1}</b> of ${steps.length}${label} · tap to stop`;
+    pill.innerHTML=`Hint <b>${n+1}</b> of ${steps.length} — ${m.why}${label} · tap to stop`;
     R.mark=()=>{
       run.forEach(c=>c.el.classList.add('hint-src'));
       if(t.length) t[t.length-1].el.classList.add('hint-dst'); else slotEls[m.to].classList.add('hint-dst');
