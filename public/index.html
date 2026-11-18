@@ -186,6 +186,8 @@ svg{display:block}
 .idx i{font-style:normal;font-size:max(8px,calc(var(--cw)*.27));margin-top:1px;line-height:.9}
 .idx.b{top:auto;left:auto;bottom:calc(var(--ch)*.035);right:calc(var(--cw)*.07);transform:rotate(180deg);display:none}
 #app.big .idx.b{display:flex}
+.sc{position:absolute;top:calc(var(--ch)*.035);right:calc(var(--cw)*.08);line-height:.92;
+  font-size:max(10px,calc(var(--cw)*.32));pointer-events:none}
 .ctr{position:absolute;inset:0;display:grid;place-items:center}
 .pip{font-size:max(13px,calc(var(--cw)*.52));line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.6)}
 .ace{position:relative;display:grid;place-items:center;width:calc(var(--cw)*.8);height:calc(var(--cw)*.8)}
@@ -828,7 +830,7 @@ function cardEl(c){
   else ctr=`<div class="ctr"><span class="pip">${g}</span></div>`;
   el.innerHTML=`<div class="card-inner">
     <div class="face back"></div>
-    <div class="face front"><span class="idx"><b>${rk}</b><i>${g}</i></span>${ctr}<span class="idx b"><b>${rk}</b><i>${g}</i></span></div>
+    <div class="face front"><span class="idx"><b>${rk}</b><i>${g}</i></span><span class="sc">${g}</span>${ctr}<span class="idx b"><b>${rk}</b><i>${g}</i></span></div>
   </div>`;
   return el;
 }
