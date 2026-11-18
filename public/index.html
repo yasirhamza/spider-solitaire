@@ -7,8 +7,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="Spider Solitaire — Midnight Parlor. A tactile, phone-first spider solitaire with 1, 2 and 4 suit modes.">
+<meta name="apple-mobile-web-app-title" content="Spider">
+<meta name="application-name" content="Spider">
+<meta name="description" content="Spider Solitaire — Midnight Parlor. A tactile, phone-first spider solitaire with 1, 2 and 4 suit modes. Installs as a full-screen app.">
 <title>Spider · Midnight Parlor Solitaire</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
@@ -34,6 +39,8 @@
 body.four{ --c-dia:#2f7de1; --c-clu:#2c9a63; }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+html:fullscreen{background:var(--felt-deep)}
+html:-webkit-full-screen{background:var(--felt-deep)}
 body{
   position:fixed;inset:0;background:var(--felt-deep);color:var(--ivory);
   font-family:var(--body);-webkit-user-select:none;user-select:none;
@@ -97,7 +104,7 @@ svg{display:block}
 .brand .spiderlogo{flex:none;transform-origin:50% 0;animation:sway 6s ease-in-out infinite alternate}
 @keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
 .word{min-width:0}
-.word h1{font-family:var(--disp);font-weight:900;font-size:clamp(15px,4.2vw,21px);
+.word h1{font-family:var(--disp);font-weight:900;font-size:clamp(14px,3.8vw,20px);
   letter-spacing:.14em;line-height:1;color:var(--gold);white-space:nowrap}
 @supports (-webkit-background-clip:text){
   .word h1{background:linear-gradient(100deg,var(--gold-lo),var(--gold-hi) 45%,var(--gold) 70%,var(--gold-hi));
@@ -108,8 +115,8 @@ svg{display:block}
 .chip{flex:none;font-family:var(--cond);font-weight:700;font-size:9px;letter-spacing:.18em;
   color:var(--gold);border:1px solid rgba(233,180,76,.4);background:rgba(233,180,76,.08);
   padding:3px 8px;border-radius:999px;white-space:nowrap}
-.stats{display:flex;gap:clamp(8px,2.4vw,18px);margin-left:auto}
-.stat{text-align:right;min-width:30px}
+.stats{display:flex;gap:clamp(8px,2.4vw,18px);margin-left:auto;min-width:0}
+.stat{text-align:right;min-width:28px}
 .stat label{display:block;font-family:var(--cond);font-weight:600;font-size:7.5px;
   letter-spacing:.2em;color:rgba(158,201,194,.62)}
 .stat b{font-family:var(--cond);font-weight:700;font-size:clamp(14px,3.8vw,17px);
@@ -130,6 +137,10 @@ svg{display:block}
 .ibtn.muted .ic-on{display:none}
 .ibtn.muted .ic-off{display:block}
 .ibtn.muted{color:rgba(158,201,194,.6)}
+.ibtn .ic-min{display:none}
+.ibtn.fs-on .ic-max{display:none}
+.ibtn.fs-on .ic-min{display:block}
+.ibtn.fs-on{color:var(--cyan);border-color:rgba(84,214,232,.45)}
 
 /* ============ BOARD ============ */
 #board{position:relative;flex:1;min-height:0;margin:2px 0 4px;touch-action:none}
@@ -346,15 +357,22 @@ kbd{font-family:var(--cond);font-weight:600;font-size:10px;letter-spacing:.08em;
 .bestline{text-align:center;font-size:11px;color:rgba(158,201,194,.75);margin-top:10px}
 .stuckweb{width:64px;height:64px;margin:2px auto 10px;background-image:var(--slotweb);background-size:contain;
   background-repeat:no-repeat;opacity:.9}
+.plat{font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.26em;color:var(--cyan);margin:12px 0 2px}
 
 /* ============ responsive trims ============ */
-@media (max-width:419px){ .hide-sm{display:none} }
-@media (max-width:379px){ .word .sub,.chip{display:none} }
+@media (max-width:539px){ .hide-sm{display:none} }
+@media (max-width:499px){ .chip{display:none} }
+@media (max-width:379px){ .word .sub{display:none} }
+@media (max-width:359px){ .stat-moves{display:none} }
 @media (max-width:339px){
-  .stat-moves{display:none}
-  .word h1{font-size:13px}
-  .ibtn{width:34px;height:34px}
-  .stats{gap:8px}
+  .word h1{font-size:12.5px}
+  .ibtn{width:32px;height:32px}
+  .ibtn svg{width:18px;height:18px}
+  .tools{gap:4px}
+  #top{gap:6px;padding-left:6px;padding-right:6px}
+  .brand{gap:5px}
+  .brand .spiderlogo{width:20px;height:28px}
+  .stats{gap:6px}
 }
 @media (max-height:430px){
   #top{min-height:42px;padding-top:3px;padding-bottom:3px}
@@ -407,6 +425,10 @@ kbd{font-family:var(--cond);font-weight:600;font-size:10px;letter-spacing:.08em;
         <svg class="ic-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>
         <svg class="ic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M17 9l5 5M22 9l-5 5"/></svg>
       </button>
+      <button type="button" id="btnFull" class="ibtn" aria-label="Full screen / install">
+        <svg class="ic-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/></svg>
+        <svg class="ic-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4"/><path d="M15 4v5h5"/><path d="M20 15h-5v5"/><path d="M4 15h5v5"/></svg>
+      </button>
       <button type="button" id="btnHelp" class="ibtn hide-sm" aria-label="How to play"><span class="q">?</span></button>
       <button type="button" id="btnNew" class="ibtn brass" aria-label="New game">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="11" height="15" rx="2"/><path d="M8 21h9a2 2 0 0 0 2-2V9"/><path d="M19 15v6M16 18h6" stroke-width="2.4"/></svg>
@@ -452,14 +474,15 @@ kbd{font-family:var(--cond);font-weight:600;font-size:10px;letter-spacing:.08em;
 'use strict';
 /* ================================================================
    SPIDER · MIDNIGHT PARLOR — phone-first spider solitaire
+   Single file · installs as a full-screen app · no wrappers
    ================================================================ */
 const $ = id => document.getElementById(id);
 const app=$('app'), board=$('board'), layer=$('layer'), slotsBox=$('slots'), pops=$('pops'),
       fanEl=$('fan'), stockBtn=$('stock'), stockBadge=$('stockBadge'), foundEl=$('found'),
       foundCount=$('foundCount'), stScore=$('stScore'), stTime=$('stTime'), stMoves=$('stMoves'),
       chip=$('chip'), btnUndo=$('btnUndo'), btnHint=$('btnHint'), btnSound=$('btnSound'),
-      btnHelp=$('btnHelp'), btnNew=$('btnNew'), modal=$('modal'), panel=$('panel'),
-      toastsBox=$('toasts'), fx=$('fx');
+      btnFull=$('btnFull'), btnHelp=$('btnHelp'), btnNew=$('btnNew'), modal=$('modal'),
+      panel=$('panel'), toastsBox=$('toasts'), fx=$('fx');
 
 const GLYPH=['♠︎','♥︎','♦︎','♣︎'];
 const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -519,6 +542,142 @@ function setVar(name,val){ document.documentElement.style.setProperty(name,val);
 setVar('--web',`url("data:image/svg+xml,${encodeURIComponent(webSVG(80,'#e9b44c',0.75,true))}")`);
 setVar('--slotweb',`url("data:image/svg+xml,${encodeURIComponent(webSVG(100,'#9ec9c2',0.4,false))}")`);
 setVar('--grain',`url("data:image/svg+xml,${encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(#n)' opacity='0.55'/></svg>")}")`);
+
+/* ---------------- PWA: icons, manifest, install ---------------- */
+function makeIcon(size){
+  const cv=document.createElement('canvas'); cv.width=cv.height=size;
+  const g=cv.getContext('2d');
+  const bg=g.createLinearGradient(0,0,size,size);
+  bg.addColorStop(0,'#175c59'); bg.addColorStop(.55,'#0c3538'); bg.addColorStop(1,'#031013');
+  g.fillStyle=bg; g.fillRect(0,0,size,size);
+  const pl=g.createRadialGradient(size*.85,size*.1,0,size*.85,size*.1,size*.7);
+  pl.addColorStop(0,'rgba(201,95,214,.35)'); pl.addColorStop(1,'rgba(201,95,214,0)');
+  g.fillStyle=pl; g.fillRect(0,0,size,size);
+  const c=size/2, R=size*.36;
+  g.strokeStyle='#e9b44c'; g.lineWidth=Math.max(2,size/110); g.globalAlpha=.9; g.lineCap='round';
+  const pts=[]; for(let k=0;k<8;k++){ const a=k/8*Math.PI*2-Math.PI/2; pts.push([Math.cos(a),Math.sin(a)]); }
+  pts.forEach(p=>{ g.beginPath(); g.moveTo(c,c); g.lineTo(c+p[0]*R,c+p[1]*R); g.stroke(); });
+  [.3,.55,.8,1].forEach(f=>{
+    g.beginPath();
+    for(let k=0;k<=8;k++){
+      const p=pts[k%8], pp=pts[(k+7)%8], x=c+p[0]*R*f, y=c+p[1]*R*f;
+      if(k===0) g.moveTo(x,y);
+      else g.quadraticCurveTo(c+(p[0]+pp[0])/2*R*f*.86, c+(p[1]+pp[1])/2*R*f*.86, x, y);
+    }
+    g.stroke();
+  });
+  g.fillStyle='#e9b44c'; g.lineWidth=Math.max(1.5,size/150);
+  g.beginPath(); g.arc(c,c-R*.10,R*.075,0,7); g.fill();
+  g.beginPath(); g.ellipse(c,c+R*.08,R*.10,R*.14,0,0,7); g.fill();
+  for(const m of [-1,1]) for(let l=0;l<4;l++){
+    const y=c-R*.06+l*R*.07;
+    g.beginPath(); g.moveTo(c+m*R*.08,y);
+    g.quadraticCurveTo(c+m*R*.24,y-R*.1+l*R*.05,c+m*R*.32,y-R*.16+l*R*.09); g.stroke();
+  }
+  g.globalAlpha=1;
+  return cv.toDataURL('image/png');
+}
+function setupPWA(){
+  try{
+    const i192=makeIcon(192), i512=makeIcon(512), i180=makeIcon(180);
+    const fav=document.createElement('link'); fav.rel='icon'; fav.type='image/png'; fav.href=i192;
+    document.head.appendChild(fav);
+    const apple=document.createElement('link'); apple.rel='apple-touch-icon'; apple.href=i180;
+    document.head.appendChild(apple);
+    if(/^https?:$/.test(location.protocol)){
+      const base=location.href.split('#')[0].split('?')[0];
+      const scope=base.replace(/[^/]*$/,'');
+      const manifest={
+        id:scope, name:'Spider — Midnight Parlor Solitaire', short_name:'Spider',
+        description:'Tactile spider solitaire with 1, 2 and 4 suit modes. Plays full screen on any phone.',
+        start_url:base, scope:scope, display:'fullscreen',
+        display_override:['fullscreen','standalone','minimal-ui'],
+        orientation:'any', background_color:'#031013', theme_color:'#071e21',
+        icons:[
+          {src:i192,sizes:'192x192',type:'image/png',purpose:'any'},
+          {src:i512,sizes:'512x512',type:'image/png',purpose:'any'},
+          {src:i512,sizes:'512x512',type:'image/png',purpose:'maskable'}
+        ]
+      };
+      const link=document.createElement('link'); link.rel='manifest';
+      link.href='data:application/manifest+json;charset=utf-8,'+encodeURIComponent(JSON.stringify(manifest));
+      document.head.appendChild(link);
+    }
+  }catch(e){}
+}
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; });
+window.addEventListener('appinstalled',()=>{
+  deferredPrompt=null; syncFullIcon();
+  toast('Installed — launch Spider from your home screen','success',3200);
+});
+function isStandalone(){
+  return matchMedia('(display-mode: standalone)').matches
+    || matchMedia('(display-mode: fullscreen)').matches
+    || navigator.standalone===true;
+}
+function fsEl(){ return document.fullscreenElement||document.webkitFullscreenElement||null; }
+function fsSupported(){ return !!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen); }
+function syncFullIcon(){
+  const on=!!fsEl()||isStandalone();
+  btnFull.classList.toggle('fs-on',on);
+  btnFull.setAttribute('aria-label',on?'Exit full screen':'Full screen / install');
+}
+async function enterFullscreen(){
+  const el=document.documentElement, req=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(!req){ openInstallModal(); return; }
+  try{ await req.call(el,{navigationUI:'hide'}); }
+  catch(e){ try{ await req.call(el); }catch(e2){ openInstallModal(); } }
+}
+function toggleFullscreen(){
+  initAudio(); SND.button();
+  if(fsEl()){
+    const exit=document.exitFullscreen||document.webkitExitFullscreen;
+    if(exit) exit.call(document);
+    return;
+  }
+  if(isStandalone()){ toast('Already running as a full-screen app','success',2000); return; }
+  if(fsSupported()) enterFullscreen(); else openInstallModal();
+}
+document.addEventListener('fullscreenchange',()=>{ syncFullIcon(); onResize(); });
+document.addEventListener('webkitfullscreenchange',()=>{ syncFullIcon(); onResize(); });
+function openInstallModal(){
+  const ua=navigator.userAgent||'';
+  const ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const android=/android/i.test(ua);
+  if(isStandalone()){
+    openModal(`<h2>FULL SCREEN</h2><p class="psub">You're already installed — the whole table is yours. No bars, no wrappers.</p>
+      <div class="btn-row"><button type="button" class="btn brass" id="iBack">Back to the Table</button></div>`);
+    $('iBack').addEventListener('click',()=>{ SND.button(); closeModal(); });
+    return;
+  }
+  const steps=ios
+    ? ['Open this page in <b>Safari</b> — that is where the install lives.','Tap the <b>Share</b> button (the square with an arrow).','Choose <b>Add to Home Screen</b>, then tap <b>Add</b>.','Launch <b>Spider</b> from your home screen: edge-to-edge, no browser bars, no popups.']
+    : android
+    ? ['Tap the browser <b>⋮ menu</b>.','Choose <b>Install app</b> — or <b>Add to Home screen</b>.','Launch <b>Spider</b> from your home screen; it opens full screen.','The <b>⛶ button</b> also works instantly, any time, without installing.']
+    : ['Click the <b>install icon</b> in the address bar, or browser menu → <b>Install Spider</b>.','Or press <b>F</b> / the <b>⛶ button</b> for instant full screen.','Hosted as a single file — no wrappers, no popups, yours to keep.'];
+  const plat=ios?'IPHONE / IPAD':android?'ANDROID':'DESKTOP';
+  openModal(`<h2>FULL SCREEN</h2><p class="psub">Play edge-to-edge — no browser bars, no preview wrappers.</p>
+    ${deferredPrompt?'<div class="btn-row" style="margin-top:0"><button type="button" class="btn brass" id="iInstall">Install App</button></div>':''}
+    <p class="plat">${plat}</p>
+    <ol class="rules">${steps.map(s=>`<li>${s}</li>`).join('')}</ol>
+    <div class="btn-row">
+      ${fsSupported()?'<button type="button" class="btn brass" id="iFs">Full Screen Now</button>':''}
+      <button type="button" class="btn ghost" id="iBack">${fsSupported()?'Later':'Got It'}</button>
+    </div>`);
+  if(deferredPrompt) $('iInstall').addEventListener('click',async()=>{
+    SND.button();
+    try{
+      deferredPrompt.prompt();
+      const choice=await deferredPrompt.userChoice;
+      deferredPrompt=null;
+      if(choice&&choice.outcome==='accepted'){ closeModal(); }
+      else toast('No problem — the manual steps above always work','info',2600);
+    }catch(e){ toast('Use the manual steps above to install','info',2600); }
+  });
+  if(fsSupported()) $('iFs').addEventListener('click',()=>{ SND.button(); closeModal(); enterFullscreen(); });
+  $('iBack').addEventListener('click',()=>{ SND.button(); closeModal(); });
+}
 
 /* ---------------- audio (synthesized, event-tied) ---------------- */
 let AC=null, master=null, noiseBuf=null;
@@ -1101,8 +1260,7 @@ function newGame(diff){
   S.stock=CARDS.slice(54);
   S.cols.forEach(a=>a[a.length-1].up=true);
   createCardEls(); layout(true);
-  const fin=order.map(c=>({x:c.x,y:c.y,z:S.cols.findIndex(a=>a.includes(c))>=0?0:0}));
-  order.forEach((c,idx)=>{ fin[idx].z=S.cols.reduce((acc,a,i)=>a.includes(c)?i:acc,0); });
+  const fin=order.map(c=>({x:c.x,y:c.y}));
   const zs=order.map(c=>{ for(let i=0;i<10;i++){ const p=S.cols[i].indexOf(c); if(p>=0) return p+1; } return 1; });
   const anchor=stockAnchor();
   instant(()=>{
@@ -1278,30 +1436,27 @@ function diffOptHTML(d,tempDiff){
 }
 function openNewGameModal(){
   let tempDiff=S?S.diff:settings.lastDiff, tempFour=settings.four, tempFast=settings.fast;
-  const render=()=>{
-    openModal(`<h2>NEW GAME</h2><p class="psub">Choose your table, then deal the cards.</p>
-      <div id="diffs">${diffOptHTML(1,tempDiff)}${diffOptHTML(2,tempDiff)}${diffOptHTML(4,tempDiff)}</div>
-      <label class="trow"><span class="tl"><b>FOUR-COLOR DECK</b><small>Blue diamonds & green clubs — easier to read</small></span>
-        <input type="checkbox" id="tFour" ${tempFour?'checked':''}><span class="switch"></span></label>
-      <label class="trow"><span class="tl"><b>QUICK ANIMATIONS</b><small>Snappier dealing on smaller screens</small></span>
-        <input type="checkbox" id="tFast" ${tempFast?'checked':''}><span class="switch"></span></label>
-      <div class="btn-row"><button type="button" class="btn ghost" id="mCancel">Cancel</button>
-        <button type="button" class="btn brass" id="mDeal">Deal Cards</button></div>
-      <button type="button" class="linkrow" id="mHelp">HOW TO PLAY</button>`);
-    panel.querySelectorAll('.diff-opt').forEach(b=>b.addEventListener('click',()=>{
-      tempDiff=+b.dataset.diff; SND.button();
-      panel.querySelectorAll('.diff-opt').forEach(o=>o.classList.toggle('sel',+o.dataset.diff===tempDiff));
-    }));
-    $('tFour').addEventListener('change',e=>{ tempFour=e.target.checked; SND.button(); });
-    $('tFast').addEventListener('change',e=>{ tempFast=e.target.checked; SND.button(); });
-    $('mCancel').addEventListener('click',()=>{ SND.button(); closeModal(); });
-    $('mHelp').addEventListener('click',()=>{ SND.button(); openHelp(true); });
-    $('mDeal').addEventListener('click',()=>{
-      settings.four=tempFour; settings.fast=tempFast; saveSettings(); applySettings();
-      SND.button(); newGame(tempDiff);
-    });
-  };
-  render();
+  openModal(`<h2>NEW GAME</h2><p class="psub">Choose your table, then deal the cards.</p>
+    <div id="diffs">${diffOptHTML(1,tempDiff)}${diffOptHTML(2,tempDiff)}${diffOptHTML(4,tempDiff)}</div>
+    <label class="trow"><span class="tl"><b>FOUR-COLOR DECK</b><small>Blue diamonds & green clubs — easier to read</small></span>
+      <input type="checkbox" id="tFour" ${tempFour?'checked':''}><span class="switch"></span></label>
+    <label class="trow"><span class="tl"><b>QUICK ANIMATIONS</b><small>Snappier dealing on smaller screens</small></span>
+      <input type="checkbox" id="tFast" ${tempFast?'checked':''}><span class="switch"></span></label>
+    <div class="btn-row"><button type="button" class="btn ghost" id="mCancel">Cancel</button>
+      <button type="button" class="btn brass" id="mDeal">Deal Cards</button></div>
+    <button type="button" class="linkrow" id="mHelp">HOW TO PLAY</button>`);
+  panel.querySelectorAll('.diff-opt').forEach(b=>b.addEventListener('click',()=>{
+    tempDiff=+b.dataset.diff; SND.button();
+    panel.querySelectorAll('.diff-opt').forEach(o=>o.classList.toggle('sel',+o.dataset.diff===tempDiff));
+  }));
+  $('tFour').addEventListener('change',e=>{ tempFour=e.target.checked; SND.button(); });
+  $('tFast').addEventListener('change',e=>{ tempFast=e.target.checked; SND.button(); });
+  $('mCancel').addEventListener('click',()=>{ SND.button(); closeModal(); });
+  $('mHelp').addEventListener('click',()=>{ SND.button(); openHelp(true); });
+  $('mDeal').addEventListener('click',()=>{
+    settings.four=tempFour; settings.fast=tempFast; saveSettings(); applySettings();
+    SND.button(); newGame(tempDiff);
+  });
 }
 function openHelp(fromMenu){
   openModal(`<h2>HOW TO PLAY</h2><p class="psub">Weave eight perfect webs — King down to Ace.</p>
@@ -1312,7 +1467,7 @@ function openHelp(fromMenu){
       <li><b>Gestures:</b> drag a run, or tap it then tap its destination. <b>Double-tap</b> a run to send it to the best spot.</li>
       <li><b>Score:</b> start at 500, −1 per move, <b>+100</b> per completed suit. Undo is free — use it boldly.</li>
     </ol>
-    <div class="keys"><kbd>Z — UNDO</kbd><kbd>H — HINT</kbd><kbd>D — DEAL</kbd><kbd>N — NEW</kbd><kbd>M — SOUND</kbd></div>
+    <div class="keys"><kbd>Z — UNDO</kbd><kbd>H — HINT</kbd><kbd>D — DEAL</kbd><kbd>N — NEW</kbd><kbd>M — SOUND</kbd><kbd>F — FULL SCREEN</kbd></div>
     <div class="btn-row"><button type="button" class="btn brass" id="hBack">${fromMenu?'BACK':'GOT IT'}</button></div>`);
   $('hBack').addEventListener('click',()=>{ SND.button(); fromMenu?openNewGameModal():closeModal(); });
 }
@@ -1358,6 +1513,7 @@ function toggleSound(){
   else toast('Sound off','info',1400);
 }
 btnSound.addEventListener('click',toggleSound);
+btnFull.addEventListener('click',toggleFullscreen);
 btnNew.addEventListener('click',()=>{ initAudio(); SND.button(); openNewGameModal(); });
 btnHelp.addEventListener('click',()=>{ initAudio(); SND.button(); openHelp(false); });
 btnUndo.addEventListener('click',undo);
@@ -1373,6 +1529,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='d'||k===' '){ e.preventDefault(); dealRow(); }
   else if(k==='n') openNewGameModal();
   else if(k==='m') toggleSound();
+  else if(k==='f') toggleFullscreen();
 });
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('selectstart',e=>e.preventDefault());
@@ -1403,7 +1560,9 @@ setInterval(()=>{
 },1000);
 
 /* ---------------- boot ---------------- */
+setupPWA();
 applySettings();
+syncFullIcon();
 syncAppHeight(); sizeCanvas(); seedMotes();
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(frame); });
 const saved=store.get(K_GAME);
