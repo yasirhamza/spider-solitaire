@@ -1517,17 +1517,20 @@ board.addEventListener('pointermove',e=>{
     if(Math.hypot(dx,dy)<7) return;
     drag.started=true; lastTapT=0; sel=null; clearMarks();
     drag.targets=legalTargets(drag.from,drag.i);
+    drag.cards.forEach(c=>c.y0=c.y);
     markTargets(drag.targets);
     drag.cards.forEach((c,k)=>{ c.el.classList.add('dragging'); c.el.style.transitionDuration=''; c.el.style.zIndex=1200+k; });
     SND.pick(); vib(4);
   }
   e.preventDefault();
   const n=drag.cards.length;
-  let step=Math.max(14,M.ch*.30);
-  step=Math.min(step,Math.max(6,(M.H-M.ch-10)/Math.max(1,n-1)));
+  // keep the run's on-table spacing (readable, never squeezed to fit the screen);
+  // the tail may hang off the bottom edge so the head can follow the finger anywhere
+  const st0=n>1?drag.cards[1].y0-drag.cards[0].y0:M.ch*.3;
+  const step=Math.max(M.ch*.18,Math.min(M.ch*.30,st0));
   let px=e.clientX-boardRect.left-drag.grabX, py=e.clientY-boardRect.top-drag.grabY;
   px=Math.max(-M.cw*.25,Math.min(M.W-M.cw*.75,px));
-  py=Math.max(-6,Math.min(M.H-M.ch-(n-1)*step-4,py));
+  py=Math.max(-6,Math.min(M.H-M.ch*.45,py));
   drag.cards.forEach((c,k)=>{
     c.x=px; c.y=py+k*step;
     c.el.style.transform=`translate3d(${px}px,${py+k*step}px,0) scale(1.045) rotate(1.6deg)`;
