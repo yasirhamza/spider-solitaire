@@ -180,14 +180,14 @@ svg{display:block}
   background:linear-gradient(165deg,#fbf6e9 0%,#f3ead4 55%,#e9ddc1 100%);
   box-shadow:inset 0 0 0 1px rgba(150,115,55,.35), inset 0 1px 0 rgba(255,255,255,.8), inset 0 -3px 8px rgba(120,90,40,.12)}
 .s0{color:var(--c-spade)} .s1{color:var(--c-heart)} .s2{color:var(--c-dia)} .s3{color:var(--c-clu)}
-.idx{position:absolute;top:calc(var(--ch)*.035);left:calc(var(--cw)*.07);display:flex;flex-direction:column;
+.idx{position:absolute;top:min(calc(var(--ch)*.035),calc(var(--strip,9999px)*.07));left:calc(var(--cw)*.07);display:flex;flex-direction:column;
   align-items:center;line-height:.92;font-family:var(--cond);font-weight:700}
-.idx b{font-size:max(10px,calc(var(--cw)*.34));letter-spacing:-.02em}
+.idx b{font-size:min(max(10px,calc(var(--cw)*.34)),calc(var(--strip,9999px)*.82));letter-spacing:-.02em}
 .idx i{font-style:normal;font-size:max(8px,calc(var(--cw)*.27));margin-top:1px;line-height:.9}
-.idx.b{top:auto;left:auto;bottom:calc(var(--ch)*.035);right:calc(var(--cw)*.07);transform:rotate(180deg);display:none}
+.idx.b{--strip:9999px;top:auto;left:auto;bottom:calc(var(--ch)*.035);right:calc(var(--cw)*.07);transform:rotate(180deg);display:none}
 #app.big .idx.b{display:flex}
-.sc{position:absolute;top:calc(var(--ch)*.035);right:calc(var(--cw)*.08);line-height:.92;
-  font-size:max(10px,calc(var(--cw)*.32));pointer-events:none}
+.sc{position:absolute;top:min(calc(var(--ch)*.035),calc(var(--strip,9999px)*.07));right:calc(var(--cw)*.08);line-height:.92;
+  font-size:min(max(10px,calc(var(--cw)*.32)),calc(var(--strip,9999px)*.78));pointer-events:none}
 .ctr{position:absolute;inset:0;display:grid;place-items:center}
 .pip{font-size:max(13px,calc(var(--cw)*.52));line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.6)}
 .ace{position:relative;display:grid;place-items:center;width:calc(var(--cw)*.8);height:calc(var(--cw)*.8)}
@@ -873,10 +873,22 @@ function computeMetrics(){
 }
 function computeYs(col){
   const n=col.length; if(!n) return [];
-  const upB=M.ch*.30, dnB=M.ch*.15; let offs=[], total=M.ch;
-  for(let k=0;k<n-1;k++){ const o=col[k].up?upB:dnB; offs.push(o); total+=o; }
-  const avail=M.H-M.top-6;
-  if(total>avail){ const f=Math.max(0,(avail-M.ch))/Math.max(1,total-M.ch); offs=offs.map(o=>Math.max(2,o*f)); }
+  // Compress tall columns in stages, like the classic games:
+  // 1) squeeze face-down cards to a sliver, 2) squeeze face-up cards down to a
+  // still-readable strip, 3) only then squeeze everything proportionally.
+  const upB=M.ch*.30, dnB=M.ch*.15, upMin=M.ch*.19, dnMin=Math.max(3,M.ch*.045);
+  let offs=[];
+  for(let k=0;k<n-1;k++) offs.push(col[k].up?upB:dnB);
+  const room=Math.max(0,M.H-M.top-6-M.ch), sum=()=>offs.reduce((a,b)=>a+b,0);
+  const squeeze=(isUp,min)=>{
+    const over=sum()-room; if(over<=0) return;
+    const idx=offs.map((o,k)=>k).filter(k=>col[k].up===isUp);
+    const slack=idx.reduce((a,k)=>a+Math.max(0,offs[k]-min),0); if(!slack) return;
+    const f=Math.min(1,over/slack);
+    idx.forEach(k=>{ offs[k]-=Math.max(0,offs[k]-min)*f; });
+  };
+  squeeze(false,dnMin); squeeze(true,upMin);
+  if(sum()>room){ const f=room/Math.max(1,sum()); offs=offs.map(o=>Math.max(2,o*f)); }
   const ys=[M.top]; for(let k=0;k<n-1;k++) ys.push(ys[k]+offs[k]);
   return ys;
 }
@@ -900,6 +912,7 @@ function renderAll(instantMode){
         c.el.classList.toggle('up',c.up);
         c.el.classList.remove('hint-src','hint-dst','drop-ok','drop-hover');
         c.el.classList.toggle('sel',!!(sel&&sel.col===i&&k>=sel.i));
+        c.el.style.setProperty('--strip',(k<col.length-1?ys[k+1]-ys[k]:9999)+'px');
         setPos(c,x,ys[k],k+1);
       });
       const sl=slotEls[i];
@@ -1517,7 +1530,6 @@ board.addEventListener('pointermove',e=>{
     if(Math.hypot(dx,dy)<7) return;
     drag.started=true; lastTapT=0; sel=null; clearMarks();
     drag.targets=legalTargets(drag.from,drag.i);
-    drag.cards.forEach(c=>c.y0=c.y);
     markTargets(drag.targets);
     drag.cards.forEach((c,k)=>{ c.el.classList.add('dragging'); c.el.style.transitionDuration=''; c.el.style.zIndex=1200+k; });
     SND.pick(); vib(4);
@@ -1526,12 +1538,15 @@ board.addEventListener('pointermove',e=>{
   const n=drag.cards.length;
   // keep the run's on-table spacing (readable, never squeezed to fit the screen);
   // the tail may hang off the bottom edge so the head can follow the finger anywhere
-  const st0=n>1?drag.cards[1].y0-drag.cards[0].y0:M.ch*.3;
-  const step=Math.max(M.ch*.18,Math.min(M.ch*.30,st0));
+  // the head always follows the finger; the run compresses to fit the space below it
+  // (down to a readable strip) and only hangs off the bottom if it still can't fit
   let px=e.clientX-boardRect.left-drag.grabX, py=e.clientY-boardRect.top-drag.grabY;
   px=Math.max(-M.cw*.25,Math.min(M.W-M.cw*.75,px));
   py=Math.max(-6,Math.min(M.H-M.ch*.45,py));
+  const fit=n>1?(M.H-4-py-M.ch)/(n-1):M.ch*.3;
+  const step=Math.max(M.ch*.15,Math.min(M.ch*.30,fit));
   drag.cards.forEach((c,k)=>{
+    c.el.style.setProperty('--strip',(k<n-1?step:9999)+'px');
     c.x=px; c.y=py+k*step;
     c.el.style.transform=`translate3d(${px}px,${py+k*step}px,0) scale(1.045) rotate(1.6deg)`;
   });
